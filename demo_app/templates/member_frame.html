@@ -1,0 +1,32 @@
+<html>
+<head>
+<title>Member Data</title>
+</head>
+<body bgcolor="#ffffff" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; margin: 4px;">
+<table cellpadding="6" cellspacing="0" border="1" bgcolor="#ffffff" width="100%">
+<tr bgcolor="#e8e8e8">
+<td colspan="2"><b>Member Account Information</b></td>
+</tr>
+<tr>
+<td width="40%"><b>Full Name</b></td>
+<td>{{ member.name }}</td>
+</tr>
+<tr>
+<td><b>Member ID</b></td>
+<td>{{ member_id }}</td>
+</tr>
+<tr>
+<td><b>Account Number</b></td>
+<td>{{ member.account }}</td>
+</tr>
+<tr>
+<td><b>Savings Balance</b></td>
+<td>${{ member.savings }}</td>
+</tr>
+<tr>
+<td><b>Checking Balance</b></td>
+<td>${{ member.checking }}</td>
+</tr>
+</table>
+</body>
+</html>

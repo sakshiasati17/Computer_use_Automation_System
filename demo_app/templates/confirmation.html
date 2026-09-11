@@ -1,0 +1,44 @@
+<html>
+<head>
+<title>Account Confirmation</title>
+</head>
+<body bgcolor="#d4d0c8" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; margin: 0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td bgcolor="#003366" style="color: #ffffff; padding: 8px;">
+<b>Fidelity Trust Credit Union &mdash; Member Portal</b>
+</td>
+</tr>
+</table>
+<br>
+<table align="center" width="460" cellpadding="0" cellspacing="0" border="1" bgcolor="#ffffff">
+<tr>
+<td>
+<table cellpadding="4" cellspacing="0" border="0" width="100%">
+<tr>
+<td colspan="2" bgcolor="#e8e8e8" align="center"><b style="color: green;">Sub-account successfully created</b></td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td width="40%">Member Name:</td>
+<td>{{ member.name }}</td>
+</tr>
+<tr>
+<td>Account Type:</td>
+<td>{{ details.account_type }}</td>
+</tr>
+<tr>
+<td>Initial Deposit:</td>
+<td>${{ details.deposit }}</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td colspan="2" align="center"><a href="{{ url_for('search') }}">Return to Search</a></td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>

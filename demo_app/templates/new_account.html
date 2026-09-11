@@ -1,0 +1,76 @@
+<html>
+<head>
+<title>New Sub-Account</title>
+</head>
+<body bgcolor="#d4d0c8" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; margin: 0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td bgcolor="#003366" style="padding: 8px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="color: #ffffff;"><b>Fidelity Trust Credit Union &mdash; Member Portal</b></td>
+<td align="right">
+<a href="{{ url_for('member_detail', member_id=member_id) }}" style="color: #ffffff;">Back to Member</a>
+&nbsp;|&nbsp;
+<a href="{{ url_for('logout') }}" style="color: #ffffff;">Log Out</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+<br>
+<table align="center" width="460" cellpadding="0" cellspacing="0" border="1" bgcolor="#ffffff">
+<tr>
+<td>
+<table cellpadding="4" cellspacing="0" border="0" width="100%">
+<tr>
+<td colspan="2" bgcolor="#e8e8e8"><b>Open New Sub-Account &mdash; {{ member.name }} ({{ member_id }})</b></td>
+</tr>
+{% if error %}
+<tr>
+<td colspan="2"><span style="color: red;">{{ error }}</span></td>
+</tr>
+{% endif %}
+<tr><td colspan="2">&nbsp;</td></tr>
+<form method="POST" action="{{ action_url }}">
+<tr>
+<td width="40%">Account Type:</td>
+<td>
+<select name="account_type">
+<option value="Savings">Savings</option>
+<option value="Checking">Checking</option>
+<option value="Money Market">Money Market</option>
+</select>
+</td>
+</tr>
+<tr>
+<td>Initial Deposit Amount:</td>
+<td><input type="text" name="deposit" size="15"></td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td colspan="2" align="center"><input type="submit" value="Confirm and Create Account"></td>
+</tr>
+</form>
+<tr><td colspan="2">&nbsp;</td></tr>
+</table>
+</td>
+</tr>
+</table>
+{% if dialog %}
+<script>
+(function () {
+    var forms = document.getElementsByTagName('form');
+    var theForm = forms[0];
+    theForm.addEventListener('submit', function (e) {
+        var proceed = confirm('This action will create a new account. Are you sure?');
+        if (!proceed) {
+            e.preventDefault();
+        }
+    });
+})();
+</script>
+{% endif %}
+</body>
+</html>

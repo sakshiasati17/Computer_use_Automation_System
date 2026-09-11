@@ -1,0 +1,481 @@
+{
+  "schema_version": "1.0.0",
+  "name": "open_new_account",
+  "version": 1,
+  "description": "Log in to the credit union member portal, look up a member, open a new Savings sub-account for them with an initial deposit, and confirm creation.",
+  "created_at": "2026-09-11T14:32:00Z",
+  "created_by": "discovery-agent-v1",
+  "target": {
+    "surface_type": "web",
+    "entry_url": "http://localhost:5000/login",
+    "app_name": "Fidelity Trust Credit Union - Member Portal"
+  },
+  "inputs": [
+    {
+      "name": "username",
+      "type": "string",
+      "required": true,
+      "description": "Portal login username.",
+      "default_value": null
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "description": "Portal login password.",
+      "default_value": null
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "The member ID to open a new sub-account for, e.g. 'M-1001'.",
+      "default_value": null
+    },
+    {
+      "name": "deposit_amount",
+      "type": "string",
+      "required": false,
+      "description": "Initial deposit amount for the new Savings account, in dollars.",
+      "default_value": "100.00"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "member_name",
+      "type": "string",
+      "description": "Full name of the member the new account was opened for.",
+      "extractor": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "The confirmation page is a stable, generated table row pairing a fixed label cell with a value cell; label text does not vary by tenant branding.",
+            "strategy": "text_near",
+            "anchor_text": "Member Name:",
+            "relation": "right_of",
+            "element_type": "td"
+          }
+        ]
+      }
+    },
+    {
+      "name": "account_type",
+      "type": "string",
+      "description": "The type of sub-account that was created (expected: 'Savings').",
+      "extractor": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Same stable label/value table row pattern as member_name.",
+            "strategy": "text_near",
+            "anchor_text": "Account Type:",
+            "relation": "right_of",
+            "element_type": "td"
+          }
+        ]
+      }
+    },
+    {
+      "name": "initial_deposit",
+      "type": "string",
+      "description": "The confirmed initial deposit amount, as displayed on the confirmation page.",
+      "extractor": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Same stable label/value table row pattern as member_name.",
+            "strategy": "text_near",
+            "anchor_text": "Initial Deposit:",
+            "relation": "right_of",
+            "element_type": "td"
+          }
+        ]
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "navigate_login",
+      "description": "Navigate to the member portal login page.",
+      "action": "navigate",
+      "target": null,
+      "value": "http://localhost:5000/login",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_visible",
+        "text": "Member Portal Login",
+        "role": null
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "login_enter_username",
+      "description": "Type the username into the login field.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "No name/id/aria attributes exist on this legacy form; the label cell immediately left of the input is the only stable anchor.",
+            "strategy": "text_near",
+            "anchor_text": "Username:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "The 'username' form field name is part of the HTML form contract and unlikely to change even though there is no visual styling hook, but CSS structure in this app is otherwise fragile across versions.",
+            "strategy": "css",
+            "selector": "input[name='username']"
+          }
+        ]
+      },
+      "value": "{{input.username}}",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_has_value",
+        "target": {
+          "locators": [
+            {
+              "confidence": "medium",
+              "rationale": "Same field just typed into; checkpoint reuses the reliable CSS name selector.",
+              "strategy": "css",
+              "selector": "input[name='username']"
+            }
+          ]
+        },
+        "expected_value": "{{input.username}}"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "login_enter_password",
+      "description": "Type the password into the login field.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Same reasoning as the username field: label proximity is the only stable anchor.",
+            "strategy": "text_near",
+            "anchor_text": "Password:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Form field name is part of the HTML contract, more stable than surrounding markup.",
+            "strategy": "css",
+            "selector": "input[name='password']"
+          }
+        ]
+      },
+      "value": "{{input.password}}",
+      "output_field": null,
+      "checkpoint": null,
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "login_submit",
+      "description": "Click the Log In button.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Submit inputs expose an implicit 'button' role with their value as accessible name.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Log In"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Only one submit control on this form, so the type selector is unambiguous here.",
+            "strategy": "css",
+            "selector": "input[type='submit']"
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/search",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "search_enter_member_id",
+      "description": "Type the member ID into the search field.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Legacy table layout with no name-based association visible to a first-pass DOM read.",
+            "strategy": "text_near",
+            "anchor_text": "Member ID:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Form field name is stable across the app's HTML contract.",
+            "strategy": "css",
+            "selector": "input[name='member_id']"
+          }
+        ]
+      },
+      "value": "{{input.member_id}}",
+      "output_field": null,
+      "checkpoint": null,
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "search_submit",
+      "description": "Click the Search button.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Submit input exposes an implicit button role with 'Search' as its accessible name.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Search"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Only one submit control on this form.",
+            "strategy": "css",
+            "selector": "input[type='submit']"
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/member/",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "open_new_account_click",
+      "description": "Click 'Open New Account' on the member detail page.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Submit input's value doubles as its accessible button name and is unique on the page.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Open New Account"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Fallback to literal visible text match if the accessible-name computation misses this control.",
+            "strategy": "text",
+            "text": "Open New Account",
+            "exact": true
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/new-account",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "select_account_type_savings",
+      "description": "Select 'Savings' as the account type.",
+      "action": "select",
+      "target": {
+        "locators": [
+          {
+            "confidence": "medium",
+            "rationale": "Select elements expose a combobox role; the accessible name computation for a preceding table-cell label is not guaranteed on every browser/AT combination.",
+            "strategy": "aria_role",
+            "role": "combobox",
+            "name": "Account Type:"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Form field name is stable; only one select element on this page.",
+            "strategy": "css",
+            "selector": "select[name='account_type']"
+          }
+        ]
+      },
+      "value": "Savings",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_has_value",
+        "target": {
+          "locators": [
+            {
+              "confidence": "medium",
+              "rationale": "Same field just set; checkpoint reuses the reliable CSS name selector.",
+              "strategy": "css",
+              "selector": "select[name='account_type']"
+            }
+          ]
+        },
+        "expected_value": "Savings"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "enter_deposit_amount",
+      "description": "Type the initial deposit amount.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Legacy table layout; label-proximity is the only reliable anchor for this field.",
+            "strategy": "text_near",
+            "anchor_text": "Initial Deposit Amount:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "Form field name is stable across the app's HTML contract.",
+            "strategy": "css",
+            "selector": "input[name='deposit']"
+          }
+        ]
+      },
+      "value": "{{input.deposit_amount}}",
+      "output_field": null,
+      "checkpoint": null,
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "confirm_create_account",
+      "description": "Click 'Confirm and Create Account' to submit the new sub-account.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Submit input's value is its accessible name and unique on the page.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Confirm and Create Account"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Only one submit control on this page today, but type-selectors are the weakest signal on a form the vendor could extend with more buttons in a future release.",
+            "strategy": "css",
+            "selector": "input[type='submit']"
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/confirmation",
+        "match_type": "contains"
+      },
+      "risk_level": "irreversible",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    }
+  ],
+  "business_outcomes": [
+    {
+      "name": "member_not_found",
+      "description": "The searched member ID does not exist in the system. This is a normal, expected search result, not a system error.",
+      "detection": {
+        "type": "text_present",
+        "text": "Member not found",
+        "case_sensitive": false
+      },
+      "severity": "expected",
+      "data_to_extract": {
+        "searched_member_id": "The member ID that was entered into the search field."
+      }
+    },
+    {
+      "name": "minimum_deposit_not_met",
+      "description": "The entered deposit amount is below the vendor-enforced minimum initial deposit and the account was not created. Expected validation behavior, not a system error.",
+      "detection": {
+        "type": "text_present",
+        "text": "Minimum initial deposit is $25.00",
+        "case_sensitive": false
+      },
+      "severity": "expected",
+      "data_to_extract": {
+        "attempted_deposit_amount": "The deposit amount that was rejected."
+      }
+    }
+  ],
+  "error_handlers": [
+    {
+      "name": "session_expired",
+      "detection": {
+        "type": "text_present",
+        "text": "Session expired. Please log in again.",
+        "case_sensitive": false
+      },
+      "recovery_action": "re_authenticate",
+      "max_retries": 1,
+      "description": "The portal silently logged the session out due to inactivity between discovery and replay, or a long-running prior step. Manifests as an unexpected redirect back to the login page with an expiry message."
+    },
+    {
+      "name": "unexpected_dialog",
+      "detection": {
+        "type": "element_visible",
+        "text": null,
+        "role": "dialog"
+      },
+      "recovery_action": "dismiss_dialog",
+      "max_retries": 1,
+      "description": "A native browser confirm() dialog appears (e.g. this tenant's config has 'confirm before creating account' enabled, unlike the recorded flow). Must be dismissed by accepting before the flow can proceed."
+    },
+    {
+      "name": "slow_load",
+      "detection": {
+        "type": "element_visible",
+        "text": "Member Portal",
+        "role": null
+      },
+      "recovery_action": "wait_and_retry",
+      "max_retries": 3,
+      "description": "The vendor app's server response is slower than the recorded timeout expects (common under tenant-specific load or a heavier branding theme). Wait longer and re-check the checkpoint before failing the step."
+    }
+  ],
+  "success_condition": {
+    "type": "text_present",
+    "text": "Sub-account successfully created",
+    "case_sensitive": false
+  }
+}

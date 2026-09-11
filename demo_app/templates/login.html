@@ -1,0 +1,52 @@
+<html>
+<head>
+<title>Fidelity Trust Credit Union - Member Portal Login</title>
+</head>
+<body bgcolor="#d4d0c8" style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; margin: 0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td bgcolor="#003366" style="color: #ffffff; padding: 8px;">
+<b>Fidelity Trust Credit Union &mdash; Member Portal</b>
+</td>
+</tr>
+<tr>
+<td bgcolor="#c0c0c0" style="padding: 3px; font-size: 10px; color: #333333;">
+Legacy Member Services System v2.3
+</td>
+</tr>
+</table>
+<br>
+<table align="center" width="340" cellpadding="0" cellspacing="0" border="1" bgcolor="#ffffff">
+<tr>
+<td>
+<table cellpadding="4" cellspacing="0" border="0" width="100%">
+<tr>
+<td colspan="2" bgcolor="#e8e8e8" align="center"><b>Member Portal Login</b></td>
+</tr>
+{% if error %}
+<tr>
+<td colspan="2" align="center"><span style="color: red;">{{ error }}</span></td>
+</tr>
+{% endif %}
+<tr><td colspan="2">&nbsp;</td></tr>
+<form method="POST" action="{{ url_for('login') }}">
+<tr>
+<td width="35%">Username:</td>
+<td><input type="text" name="username" size="20"></td>
+</tr>
+<tr>
+<td>Password:</td>
+<td><input type="password" name="password" size="20"></td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td colspan="2" align="center"><input type="submit" value="Log In"></td>
+</tr>
+</form>
+<tr><td colspan="2">&nbsp;</td></tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
