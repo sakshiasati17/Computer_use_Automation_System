@@ -7,7 +7,7 @@
   "created_by": "discovery-agent-v1",
   "target": {
     "surface_type": "web",
-    "entry_url": "http://localhost:5000/login",
+    "entry_url": "http://127.0.0.1:5000/login",
     "app_name": "Fidelity Trust Credit Union - Member Portal"
   },
   "inputs": [
@@ -99,7 +99,7 @@
       "description": "Navigate to the member portal login page.",
       "action": "navigate",
       "target": null,
-      "value": "http://localhost:5000/login",
+      "value": "http://127.0.0.1:5000/login",
       "output_field": null,
       "checkpoint": {
         "type": "element_visible",
