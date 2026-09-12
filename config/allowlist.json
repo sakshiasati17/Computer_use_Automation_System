@@ -1,0 +1,6 @@
+{
+  "permitted_domains": ["localhost", "127.0.0.1"],
+  "permitted_ports": [5000],
+  "blocked_url_patterns": ["/admin", "/settings", "/delete"],
+  "blocked_action_keywords": ["delete", "remove", "transfer_funds", "wire_transfer", "close_account"]
+}

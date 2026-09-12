@@ -1,0 +1,6 @@
+{
+  "safe_actions": ["navigate", "click_read_only", "type_search", "extract", "wait"],
+  "risky_patterns": ["confirm", "submit", "create", "approve", "modify", "update"],
+  "irreversible_patterns": ["delete", "remove", "transfer", "close", "wire"],
+  "risky_url_patterns": ["/new-account", "/transfer", "/close"]
+}

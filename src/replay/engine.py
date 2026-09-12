@@ -34,6 +34,7 @@ from uuid import uuid4
 from playwright.async_api import Frame, Locator, Page, async_playwright
 
 from ..handoff import DEFAULT_CDP_PORT, DEFAULT_OPERATOR_PORT, EscalationReason, escalate, get_hub
+from ..safety import check_action, check_url, classify_action
 from ..models import (
     ActionType,
     Artifact,
@@ -204,13 +205,51 @@ def _resolve_inputs(artifact: Artifact, input_params: dict[str, Any]) -> dict[st
 
 
 # --------------------------------------------------------------------------
-# Safety allowlist
+# Safety allowlist / risk classification
 # --------------------------------------------------------------------------
 
 
 def _domain_allowed(url: str, permitted_domains: list[str]) -> bool:
     netloc = urlparse(url).netloc
     return any(netloc == domain or netloc.endswith(f".{domain}") for domain in permitted_domains)
+
+
+_RISK_ORDER = {"safe": 0, "risky": 1, "irreversible": 2}
+
+
+def _step_risk_details(step: Step) -> str:
+    """Identifying text for `step`, for use by `check_action`/`classify_action`.
+
+    Pulls whatever text the step's locator fallback chain carries (label
+    text, accessible name, anchor text, selector) alongside the step's own
+    description and value, since a `Step`'s `target` is a structured
+    `ElementTarget`, not a plain string, unlike the discovery agent's
+    free-form `AgentAction`.
+    """
+    parts = [step.description]
+    if step.target is not None:
+        for locator in step.target.locators:
+            for attr in ("text", "name", "anchor_text", "selector", "expression"):
+                value = getattr(locator, attr, None)
+                if value:
+                    parts.append(str(value))
+    if step.value:
+        parts.append(step.value)
+    return " ".join(parts)
+
+
+def _effective_risk_level(declared: RiskLevel, classified: str) -> RiskLevel:
+    """The more severe of the artifact's declared risk_level and a fresh classification.
+
+    Defense in depth: an artifact's `risk_level` was set once, at recording
+    time; `classify_action` re-derives it from the step's current text/URL
+    against the live `config/risk_rules.json`, so a step that now matches a
+    risky/irreversible pattern is never treated as safe just because it was
+    recorded that way.
+    """
+    if _RISK_ORDER.get(classified, 0) > _RISK_ORDER.get(declared.value, 0):
+        return RiskLevel(classified)
+    return declared
 
 
 # --------------------------------------------------------------------------
@@ -511,6 +550,12 @@ async def _perform_step_action(
                 expected=f"navigation target within permitted domains {permitted_domains}",
                 observed=f"navigation to {url!r} ({urlparse(url).netloc!r})",
             )
+        if not check_url(url):
+            raise SafetyViolationError(
+                f"navigation to {url!r} blocked by the safety domain/URL allowlist",
+                expected="navigation target permitted by config/allowlist.json",
+                observed=f"navigation to {url!r}",
+            )
         await page.goto(url)
         return
 
@@ -535,6 +580,14 @@ async def _perform_step_action(
         return
 
     assert step.target is not None  # guaranteed by Step's own validator for click/type/select/extract
+    action_details = _step_risk_details(step)
+    if not check_action(step.action.value, action_details):
+        raise SafetyViolationError(
+            f"{step.action.value} action blocked by the safety action-keyword allowlist",
+            expected="action permitted by config/allowlist.json blocked_action_keywords",
+            observed=f"{step.action.value}: {action_details!r}",
+        )
+
     resolved, attempts = await _resolve_element_target(page, step.target, inputs, step.timeout_ms)
     locator_attempts.extend(attempts)
     if resolved is None:
@@ -624,7 +677,19 @@ async def _execute_step(
     retries = 0
     escalation_attempts = 0
 
-    if step.risk_level in (RiskLevel.RISKY, RiskLevel.IRREVERSIBLE) and page.is_closed():
+    classified_risk = classify_action(
+        {"action_type": step.action.value, "description": _step_risk_details(step)}, url=page.url
+    )
+    effective_risk_level = _effective_risk_level(step.risk_level, classified_risk)
+    if effective_risk_level is not step.risk_level:
+        logger.warning(
+            "step %s: risk re-classified from %s to %s at replay time (config/risk_rules.json)",
+            step.step_id,
+            step.risk_level.value,
+            effective_risk_level.value,
+        )
+
+    if effective_risk_level in (RiskLevel.RISKY, RiskLevel.IRREVERSIBLE) and page.is_closed():
         # Nothing to escalate: there's no page left for a human to review or
         # act on. Surface this plainly rather than pausing an escalation
         # that can never be resolved (see the matching guard in the
@@ -652,18 +717,18 @@ async def _execute_step(
         )
         return record, stop_outcome
 
-    if step.risk_level in (RiskLevel.RISKY, RiskLevel.IRREVERSIBLE):
+    if effective_risk_level in (RiskLevel.RISKY, RiskLevel.IRREVERSIBLE):
         if not config.enable_escalation:
             logger.warning(
                 "step %s has risk_level=%s but enable_escalation=False; proceeding unattended",
                 step.step_id,
-                step.risk_level.value,
+                effective_risk_level.value,
             )
             escalations.append(
                 Escalation(
                     step_id=step.step_id,
-                    reason=f"step risk_level={step.risk_level.value}",
-                    risk_level=step.risk_level,
+                    reason=f"step risk_level={effective_risk_level.value}",
+                    risk_level=effective_risk_level,
                     requested_at=datetime.now(timezone.utc),
                 )
             )
@@ -675,7 +740,7 @@ async def _execute_step(
                 reason=EscalationReason.RISKY_ACTION,
                 description=(
                     f"Step {step.step_id!r} ({step.description}) is marked "
-                    f"risk_level={step.risk_level.value!r} and requires human approval before "
+                    f"risk_level={effective_risk_level.value!r} and requires human approval before "
                     f"it runs: {step.action.value} on the step's target."
                 ),
                 step_history=[r.model_dump(mode="json") for r in execution_log],
@@ -685,8 +750,8 @@ async def _execute_step(
             escalations.append(
                 Escalation(
                     step_id=step.step_id,
-                    reason=f"step risk_level={step.risk_level.value}",
-                    risk_level=step.risk_level,
+                    reason=f"step risk_level={effective_risk_level.value}",
+                    risk_level=effective_risk_level,
                     requested_at=started_at,
                     resolution=EscalationResolution.APPROVED,
                     resolved_at=datetime.now(timezone.utc),
@@ -866,7 +931,7 @@ async def _execute_step(
                     Escalation(
                         step_id=step.step_id,
                         reason=give_up_reason,
-                        risk_level=step.risk_level,
+                        risk_level=effective_risk_level,
                         requested_at=datetime.now(timezone.utc),
                         resolution=EscalationResolution.APPROVED
                         if esc_outcome.human_took_control

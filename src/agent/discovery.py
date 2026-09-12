@@ -33,6 +33,7 @@ from typing import Any
 from playwright.async_api import Frame, Page, async_playwright
 
 from ..artifacts.emitter import emit_artifact
+from ..safety import check_action, check_url, classify_action, redact_dict
 from .observer import AgentAction, AgentActionType, observe_and_decide
 
 __all__ = ["run_discovery", "resolve_element", "ResolvedElement", "build_arg_parser", "main"]
@@ -399,8 +400,11 @@ async def run_discovery(goal: str, target: str, max_steps: int = DEFAULT_MAX_STE
     try:
         await _run_session(goal, target, max_steps, log, screenshots_dir)
     finally:
+        # Redact before anything touches disk; `log` itself stays unredacted
+        # in memory so emit_artifact (below) and the return value still see
+        # real content.
         log_path = session_dir / "discovery_log.json"
-        log_path.write_text(json.dumps(log, indent=2, default=str))
+        log_path.write_text(json.dumps(redact_dict(log), indent=2, default=str))
         log["log_path"] = str(log_path)
 
         if log["outcome"] == "goal_complete":
@@ -412,18 +416,13 @@ async def run_discovery(goal: str, target: str, max_steps: int = DEFAULT_MAX_STE
                 logger.exception("emit_artifact failed after a successful discovery run")
         else:
             failure_path = session_dir / "failure_log.json"
-            failure_path.write_text(
-                json.dumps(
-                    {
-                        "outcome": log["outcome"],
-                        "stuck_reason": log.get("stuck_reason"),
-                        "last_screenshot": log["steps"][-1]["screenshot_path"] if log["steps"] else None,
-                        "last_step": log["steps"][-1] if log["steps"] else None,
-                    },
-                    indent=2,
-                    default=str,
-                )
-            )
+            failure_summary = {
+                "outcome": log["outcome"],
+                "stuck_reason": log.get("stuck_reason"),
+                "last_screenshot": log["steps"][-1]["screenshot_path"] if log["steps"] else None,
+                "last_step": log["steps"][-1] if log["steps"] else None,
+            }
+            failure_path.write_text(json.dumps(redact_dict(failure_summary), indent=2, default=str))
             log["failure_log_path"] = str(failure_path)
             logger.warning("discovery ended without success: %s", log["outcome"])
 
@@ -520,27 +519,56 @@ async def _run_session(
                 error_message: str | None = None
                 success = True
 
-                try:
-                    if action.action_type is AgentActionType.NAVIGATE:
-                        await _execute_navigate(page, action)
-                    elif action.action_type is AgentActionType.CLICK:
-                        resolved = await _execute_click(page, action)
-                    elif action.action_type is AgentActionType.TYPE:
-                        resolved = await _execute_type(page, action)
-                    elif action.action_type is AgentActionType.SELECT:
-                        resolved = await _execute_select(page, action)
-                    elif action.action_type is AgentActionType.WAIT:
-                        resolved = await _execute_wait(page, action)
-                    elif action.action_type in (
-                        AgentActionType.EXTRACT_DATA,
-                        AgentActionType.GOAL_COMPLETE,
-                        AgentActionType.STUCK,
-                    ):
-                        pass  # no page interaction: vision-only read or loop control
-                except Exception as exc:  # noqa: BLE001 - record and continue; don't crash the loop
+                risk_level = classify_action(action, url=page.url)
+                blocked_reason: str | None = None
+                if action.action_type is AgentActionType.NAVIGATE:
+                    if not check_url(action.value or ""):
+                        blocked_reason = f"navigation to {action.value!r} blocked by the domain/URL allowlist"
+                elif action.action_type in (
+                    AgentActionType.CLICK,
+                    AgentActionType.TYPE,
+                    AgentActionType.SELECT,
+                ):
+                    action_details = " ".join(
+                        filter(None, [action.target_text, action.target_description, action.value])
+                    )
+                    if not check_action(action.action_type.value, action_details):
+                        blocked_reason = (
+                            f"{action.action_type.value} action blocked by the action-keyword allowlist: "
+                            f"{action_details!r}"
+                        )
+                if blocked_reason is None and risk_level == "irreversible":
+                    blocked_reason = (
+                        f"{action.action_type.value} action classified as irreversible; discovery has no "
+                        "human-in-the-loop escalation, so it cannot be performed unattended here"
+                    )
+
+                if blocked_reason is not None:
                     success = False
-                    error_message = str(exc)
-                    logger.warning("step %d (%s) failed: %s", step_number, action.action_type.value, exc)
+                    error_message = blocked_reason
+                    logger.warning("step %d blocked by safety policy: %s", step_number, blocked_reason)
+                else:
+                    try:
+                        if action.action_type is AgentActionType.NAVIGATE:
+                            await _execute_navigate(page, action)
+                        elif action.action_type is AgentActionType.CLICK:
+                            resolved = await _execute_click(page, action)
+                        elif action.action_type is AgentActionType.TYPE:
+                            resolved = await _execute_type(page, action)
+                        elif action.action_type is AgentActionType.SELECT:
+                            resolved = await _execute_select(page, action)
+                        elif action.action_type is AgentActionType.WAIT:
+                            resolved = await _execute_wait(page, action)
+                        elif action.action_type in (
+                            AgentActionType.EXTRACT_DATA,
+                            AgentActionType.GOAL_COMPLETE,
+                            AgentActionType.STUCK,
+                        ):
+                            pass  # no page interaction: vision-only read or loop control
+                    except Exception as exc:  # noqa: BLE001 - record and continue; don't crash the loop
+                        success = False
+                        error_message = str(exc)
+                        logger.warning("step %d (%s) failed: %s", step_number, action.action_type.value, exc)
 
                 if action.action_type not in (AgentActionType.GOAL_COMPLETE, AgentActionType.STUCK):
                     await page.wait_for_timeout(SETTLE_DELAY_MS)
@@ -559,6 +587,8 @@ async def _run_session(
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "success": success,
                     "error_message": error_message,
+                    "risk_level": risk_level,
+                    "safety_blocked": blocked_reason is not None,
                     "resolution": _resolution_to_dict(resolved),
                     "page_url": page.url,
                     "page_title": await page.title(),

@@ -57,6 +57,7 @@ from ..models import (
     UrlCondition,
     UrlMatchType,
 )
+from ..safety import redact_dict
 
 __all__ = ["emit_artifact"]
 
@@ -568,6 +569,10 @@ def emit_artifact(discovery_log: dict[str, Any], output_dir: Path | None = None)
         success_condition=success_condition,
     )
 
+    # Redact before this hits disk: page-derived text (business-outcome
+    # detection strings, descriptions) can carry account numbers, SSNs, or
+    # other sensitive values lifted from the page during discovery.
+    redacted = redact_dict(artifact.model_dump(mode="json"))
     path = output_dir / f"{name}.json"
-    path.write_text(artifact.model_dump_json(indent=2))
+    path.write_text(json.dumps(redacted, indent=2))
     return path
