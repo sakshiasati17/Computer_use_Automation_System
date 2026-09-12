@@ -40,6 +40,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         dest="permitted_domains",
         help="Domain allowed for navigate steps. Repeatable. Defaults to the artifact's own recorded domain.",
     )
+    replay.add_argument(
+        "--enable-escalation",
+        action="store_true",
+        help=(
+            "Pause for human review on risky/irreversible steps and hard failures instead of "
+            "proceeding or failing unattended. Forces a visible (headed) browser window and starts "
+            "the operator console at http://127.0.0.1:8080."
+        ),
+    )
 
     return parser
 
@@ -69,7 +78,11 @@ def main(argv: list[str] | None = None) -> int:
         from .replay import ReplayConfig, replay_artifact
 
         params = json.loads(args.params)
-        config = ReplayConfig(permitted_domains=args.permitted_domains, headless=not args.headed)
+        config = ReplayConfig(
+            permitted_domains=args.permitted_domains,
+            headless=not args.headed,
+            enable_escalation=args.enable_escalation,
+        )
         result = asyncio.run(replay_artifact(args.artifact, params, config))
         print(result.model_dump_json(indent=2))
         return 0 if result.outcome.type != "hard_failure" else 1

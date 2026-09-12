@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Automation Operator Console</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e37;
+    --text: #e6e8eb;
+    --muted: #9aa1ac;
+    --accent: #4f8cff;
+    --danger: #e5484d;
+    --warn: #d9a441;
+    --ok: #3fb950;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+
+  .state-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .state-AUTOMATION .dot { background: var(--ok); }
+  .state-PAUSED .dot { background: var(--warn); }
+  .state-HUMAN_CONTROL .dot { background: var(--accent); }
+  .state-COMPLETED .dot { background: var(--muted); }
+
+  .empty {
+    padding: 48px 16px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 24px;
+    margin-bottom: 16px;
+  }
+  .field-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .field-value { font-size: 0.95rem; word-break: break-word; }
+  .reason-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(217, 164, 65, 0.15);
+    color: var(--warn);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .description {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+  }
+
+  .screenshot-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    margin-bottom: 16px;
+  }
+  .screenshot-wrap img { display: block; width: 100%; height: auto; }
+
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-take-control { background: var(--accent); color: #fff; }
+  .btn-resume { background: var(--ok); color: #06240f; }
+  button:not(:disabled):hover { opacity: 0.85; }
+
+  .connect-info {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 16px;
+    word-break: break-all;
+  }
+  .connect-info code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Automation Operator Console</h1>
+  <div class="subtitle">Human-in-the-loop escalation handoff</div>
+
+  <div id="banner" class="state-banner state-AUTOMATION">
+    <span class="dot"></span>
+    <span id="banner-text">Checking status…</span>
+  </div>
+
+  <div id="empty" class="empty" hidden>
+    No active escalation. Automation is running unattended — this page will
+    update automatically when it needs a human.
+  </div>
+
+  <div id="card" class="card" hidden>
+    <div class="grid">
+      <div>
+        <div class="field-label">Capability</div>
+        <div class="field-value" id="f-capability">–</div>
+      </div>
+      <div>
+        <div class="field-label">Current step</div>
+        <div class="field-value" id="f-step">–</div>
+      </div>
+      <div>
+        <div class="field-label">Reason</div>
+        <div class="field-value"><span class="reason-badge" id="f-reason">–</span></div>
+      </div>
+      <div>
+        <div class="field-label">Paused at</div>
+        <div class="field-value" id="f-timestamp">–</div>
+      </div>
+      <div>
+        <div class="field-label">Current URL</div>
+        <div class="field-value" id="f-url">–</div>
+      </div>
+    </div>
+
+    <div class="description" id="f-description">–</div>
+
+    <div class="screenshot-wrap">
+      <img id="screenshot" src="/api/screenshot" alt="Current browser screenshot" />
+    </div>
+
+    <div class="actions">
+      <button class="btn-take-control" id="btn-take-control">Take Control</button>
+      <button class="btn-resume" id="btn-resume">Resume Automation</button>
+    </div>
+
+    <div class="connect-info" id="connect-info"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const banner = document.getElementById('banner');
+  const bannerText = document.getElementById('banner-text');
+  const empty = document.getElementById('empty');
+  const card = document.getElementById('card');
+  const screenshot = document.getElementById('screenshot');
+  const btnTakeControl = document.getElementById('btn-take-control');
+  const btnResume = document.getElementById('btn-resume');
+  const connectInfo = document.getElementById('connect-info');
+  const toast = document.getElementById('toast');
+
+  let currentState = 'AUTOMATION';
+  let screenshotTimer = null;
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  function refreshScreenshot() {
+    screenshot.src = '/api/screenshot?t=' + Date.now();
+  }
+
+  function applyState(status) {
+    const iv = status.intervention;
+    const state = status.control_state;
+    currentState = state;
+
+    banner.className = 'state-banner state-' + state;
+    const labels = {
+      AUTOMATION: 'Automation is in control — running unattended.',
+      PAUSED: 'Paused — waiting for a human to review.',
+      HUMAN_CONTROL: 'Human is in control of the browser.',
+      COMPLETED: 'Run completed.',
+    };
+    bannerText.textContent = labels[state] || state;
+
+    if (!iv) {
+      empty.hidden = false;
+      card.hidden = true;
+      if (screenshotTimer) { clearInterval(screenshotTimer); screenshotTimer = null; }
+      return;
+    }
+
+    empty.hidden = true;
+    card.hidden = false;
+
+    document.getElementById('f-capability').textContent = iv.capability_name;
+    document.getElementById('f-step').textContent = iv.current_step_id;
+    document.getElementById('f-reason').textContent = iv.reason;
+    document.getElementById('f-timestamp').textContent = new Date(iv.timestamp).toLocaleString();
+    document.getElementById('f-url').textContent = iv.current_url;
+    document.getElementById('f-description').textContent = iv.description;
+
+    let info = '';
+    if (iv.cdp_websocket_url) {
+      info += 'DevTools/CDP endpoint: <code>' + iv.cdp_websocket_url + '</code><br/>';
+    }
+    if (iv.window_info && iv.window_info.bounds) {
+      info += 'Browser window bounds: <code>' + JSON.stringify(iv.window_info.bounds) + '</code>';
+    }
+    connectInfo.innerHTML = info;
+
+    btnTakeControl.disabled = state !== 'PAUSED';
+    btnResume.disabled = state === 'AUTOMATION' || state === 'COMPLETED';
+
+    refreshScreenshot();
+
+    if (state === 'HUMAN_CONTROL' && !screenshotTimer) {
+      screenshotTimer = setInterval(refreshScreenshot, 5000);
+    } else if (state !== 'HUMAN_CONTROL' && screenshotTimer) {
+      clearInterval(screenshotTimer);
+      screenshotTimer = null;
+    }
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch('/api/intervention');
+      const status = await res.json();
+      applyState(status);
+    } catch (err) {
+      bannerText.textContent = 'Lost connection to operator server…';
+    }
+  }
+
+  async function post(path) {
+    try {
+      const res = await fetch(path, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        showToast(body.detail || ('Request failed: ' + res.status));
+        return;
+      }
+      const status = await res.json();
+      applyState(status);
+    } catch (err) {
+      showToast('Request failed: ' + err);
+    }
+  }
+
+  btnTakeControl.addEventListener('click', () => post('/api/take-control'));
+  btnResume.addEventListener('click', () => post('/api/resume'));
+
+  poll();
+  setInterval(poll, 2000);
+})();
+</script>
+</body>
+</html>

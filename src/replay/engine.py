@@ -33,6 +33,7 @@ from uuid import uuid4
 
 from playwright.async_api import Frame, Locator, Page, async_playwright
 
+from ..handoff import DEFAULT_CDP_PORT, DEFAULT_OPERATOR_PORT, EscalationReason, escalate, get_hub
 from ..models import (
     ActionType,
     Artifact,
@@ -46,6 +47,7 @@ from ..models import (
     ElementTarget,
     ElementVisibleCondition,
     Escalation,
+    EscalationResolution,
     ErrorHandler,
     ExecutionOutcome,
     ExecutionResult,
@@ -76,6 +78,12 @@ MIN_LOCATOR_TIMEOUT_MS = 500
 CONDITION_POLL_INTERVAL_MS = 200
 CHECKPOINT_ELEMENT_TIMEOUT_MS = 1000
 PAGE_TEXT_SNIPPET_LIMIT = 300
+MAX_ESCALATION_RETRIES = 3
+"""Cap on how many times a single step re-attempts after a human takes control
+during a hard-failure escalation. A human-driven retry loop cannot spin
+forever the way an unattended one could, but it still needs *some* bound in
+case the human keeps clicking Take Control without resolving the underlying
+problem."""
 
 
 # --------------------------------------------------------------------------
@@ -97,6 +105,16 @@ class ReplayConfig:
     permitted_domains: list[str] | None = None
     headless: bool = True
     evidence_dir: Path = field(default_factory=lambda: DEFAULT_EVIDENCE_DIR)
+    enable_escalation: bool = False
+    """When True, `risky`/`irreversible` steps and hard failures pause for a
+    human via `src/handoff` instead of proceeding or failing unattended.
+    Forces `headless=False` at launch time, since a human needs a visible
+    window to intervene in (see `replay_artifact`)."""
+    operator_port: int = DEFAULT_OPERATOR_PORT
+    cdp_port: int = DEFAULT_CDP_PORT
+    """Chrome DevTools Protocol port the browser is launched with when
+    escalation is enabled, so a human can attach DevTools independently of
+    Playwright's own connection."""
 
 
 # --------------------------------------------------------------------------
@@ -591,6 +609,8 @@ async def _execute_step(
     permitted_domains: list[str],
     outputs: dict[str, Any],
     escalations: list[Escalation],
+    execution_log: list[StepExecutionRecord],
+    config: ReplayConfig,
 ) -> tuple[StepExecutionRecord, ExecutionOutcome | None]:
     """Run one artifact step to completion. Returns (log record, stop-outcome-or-None).
 
@@ -602,21 +622,121 @@ async def _execute_step(
     start_perf = time.monotonic()
     locator_attempts: list[LocatorAttempt] = []
     retries = 0
+    escalation_attempts = 0
+
+    if step.risk_level in (RiskLevel.RISKY, RiskLevel.IRREVERSIBLE) and page.is_closed():
+        # Nothing to escalate: there's no page left for a human to review or
+        # act on. Surface this plainly rather than pausing an escalation
+        # that can never be resolved (see the matching guard in the
+        # exception handler below).
+        duration_ms = int((time.monotonic() - start_perf) * 1000)
+        record = StepExecutionRecord(
+            step_id=step.step_id,
+            action=step.action,
+            description=step.description,
+            status=StepStatus.FAILED,
+            started_at=started_at,
+            duration_ms=duration_ms,
+            retries=0,
+            locator_attempts=[],
+            error_message="browser page was closed unexpectedly before this risky/irreversible step could run",
+        )
+        stop_outcome = HardFailureOutcome(
+            failed_step_id=step.step_id,
+            action_attempted=step.action,
+            expected="the browser page to still be open for this risky/irreversible step",
+            observed="the browser page was closed",
+            page_url=None,
+            exception_type="PageClosed",
+            message="browser page was closed unexpectedly; cannot perform or escalate a risky/irreversible step with no page",
+        )
+        return record, stop_outcome
 
     if step.risk_level in (RiskLevel.RISKY, RiskLevel.IRREVERSIBLE):
-        logger.warning(
-            "step %s has risk_level=%s; full human-in-the-loop escalation is not yet implemented, proceeding",
-            step.step_id,
-            step.risk_level.value,
-        )
-        escalations.append(
-            Escalation(
-                step_id=step.step_id,
-                reason=f"step risk_level={step.risk_level.value}",
-                risk_level=step.risk_level,
-                requested_at=datetime.now(timezone.utc),
+        if not config.enable_escalation:
+            logger.warning(
+                "step %s has risk_level=%s but enable_escalation=False; proceeding unattended",
+                step.step_id,
+                step.risk_level.value,
             )
-        )
+            escalations.append(
+                Escalation(
+                    step_id=step.step_id,
+                    reason=f"step risk_level={step.risk_level.value}",
+                    risk_level=step.risk_level,
+                    requested_at=datetime.now(timezone.utc),
+                )
+            )
+        else:
+            esc_outcome = await escalate(
+                page=page,
+                capability_name=artifact.name,
+                step_id=step.step_id,
+                reason=EscalationReason.RISKY_ACTION,
+                description=(
+                    f"Step {step.step_id!r} ({step.description}) is marked "
+                    f"risk_level={step.risk_level.value!r} and requires human approval before "
+                    f"it runs: {step.action.value} on the step's target."
+                ),
+                step_history=[r.model_dump(mode="json") for r in execution_log],
+                cdp_port=config.cdp_port,
+                operator_port=config.operator_port,
+            )
+            escalations.append(
+                Escalation(
+                    step_id=step.step_id,
+                    reason=f"step risk_level={step.risk_level.value}",
+                    risk_level=step.risk_level,
+                    requested_at=started_at,
+                    resolution=EscalationResolution.APPROVED,
+                    resolved_at=datetime.now(timezone.utc),
+                    resolved_by="operator" if esc_outcome.human_took_control else None,
+                    notes=(
+                        f"human_took_control={esc_outcome.human_took_control}, "
+                        f"duration={esc_outcome.duration_seconds:.1f}s, "
+                        f"content_changed={esc_outcome.content_diff_summary is not None}"
+                    ),
+                )
+            )
+            if esc_outcome.human_took_control:
+                # The human already performed (or deliberately avoided) the risky
+                # action directly in the visible browser. Do NOT also perform it
+                # here — re-running a risky/irreversible step because both the
+                # human and the engine acted on it would be worse than the pause
+                # itself (e.g. double-submitting a payment). Verify the
+                # checkpoint instead and hand back to the normal step loop.
+                duration_ms = int((time.monotonic() - start_perf) * 1000)
+                checkpoint_ok = True
+                if step.checkpoint is not None:
+                    checkpoint_ok = await _wait_for_condition(page, step.checkpoint, inputs, step.timeout_ms)
+                record = StepExecutionRecord(
+                    step_id=step.step_id,
+                    action=step.action,
+                    description=step.description,
+                    status=StepStatus.PASSED if checkpoint_ok else StepStatus.FAILED,
+                    started_at=started_at,
+                    duration_ms=duration_ms,
+                    retries=0,
+                    locator_attempts=[],
+                    error_message=None if checkpoint_ok else "checkpoint not met after human-performed action",
+                )
+                if checkpoint_ok:
+                    return record, None
+                screenshot_path = await _save_failure_screenshot(page, artifact, step)
+                stop_outcome = HardFailureOutcome(
+                    failed_step_id=step.step_id,
+                    action_attempted=step.action,
+                    expected=_describe_condition(step.checkpoint) if step.checkpoint else "step to complete successfully",
+                    observed=await _describe_page_state(page),
+                    screenshot_path=screenshot_path,
+                    page_url=page.url,
+                    exception_type="HumanInterventionCheckpointFailed",
+                    message="human took control during a risky-action escalation, but the step's checkpoint still was not met",
+                )
+                return record, stop_outcome
+            # else: a bare "Resume Automation" click is an approval, not a
+            # substitute for the action — fall through and let the engine
+            # perform the step itself, same as any other step.
 
     last_exc: StepFailure | Exception | None = None
 
@@ -699,21 +819,9 @@ async def _execute_step(
                 return record, outcome
 
             handler = await _match_error_handler(page, artifact, inputs)
+            give_up_reason: str | None = None
             if handler is not None and handler.recovery_action is RecoveryAction.ESCALATE:
-                logger.warning(
-                    "error_handler %r for step %s requests escalation; full human-in-the-loop escalation "
-                    "is not yet implemented, treating as a hard failure",
-                    handler.name,
-                    step.step_id,
-                )
-                escalations.append(
-                    Escalation(
-                        step_id=step.step_id,
-                        reason=f"error_handler '{handler.name}' requested escalation",
-                        risk_level=RiskLevel.RISKY,
-                        requested_at=datetime.now(timezone.utc),
-                    )
-                )
+                give_up_reason = f"error_handler {handler.name!r} requested escalation: {handler.description}"
             elif handler is not None and retries < handler.max_retries:
                 retries += 1
                 logger.info(
@@ -725,6 +833,54 @@ async def _execute_step(
                 )
                 await _attempt_recovery(page, artifact, step_index, inputs, permitted_domains, handler.recovery_action)
                 continue
+            else:
+                give_up_reason = f"step {step.step_id!r} failed: {exc}"
+
+            if page.is_closed():
+                # A closed page can't be shown to a human, and every locator
+                # attempt against it fails silently (caught per-frame in
+                # `_locate_across_frames`), which is indistinguishable from
+                # "element genuinely not found" by the time we get here -
+                # check explicitly rather than pausing an escalation no one
+                # can ever resolve.
+                give_up_reason = f"{give_up_reason} (the browser page was closed unexpectedly; nothing left to escalate)"
+            elif config.enable_escalation and escalation_attempts < MAX_ESCALATION_RETRIES:
+                escalation_attempts += 1
+                esc_outcome = await escalate(
+                    page=page,
+                    capability_name=artifact.name,
+                    step_id=step.step_id,
+                    reason=EscalationReason.HARD_FAILURE,
+                    description=(
+                        f"{give_up_reason} (escalation {escalation_attempts}/{MAX_ESCALATION_RETRIES} "
+                        "before this run gives up on the step)."
+                    ),
+                    step_history=[r.model_dump(mode="json") for r in execution_log],
+                    cdp_port=config.cdp_port,
+                    operator_port=config.operator_port,
+                )
+                # Bare "Resume" (no Take Control) means the human looked and
+                # couldn't/wouldn't fix it either — REJECTED. Taking control
+                # means they intervened, so the step deserves another try.
+                escalations.append(
+                    Escalation(
+                        step_id=step.step_id,
+                        reason=give_up_reason,
+                        risk_level=step.risk_level,
+                        requested_at=datetime.now(timezone.utc),
+                        resolution=EscalationResolution.APPROVED
+                        if esc_outcome.human_took_control
+                        else EscalationResolution.REJECTED,
+                        resolved_at=datetime.now(timezone.utc),
+                        resolved_by="operator" if esc_outcome.human_took_control else None,
+                        notes=(
+                            f"human_took_control={esc_outcome.human_took_control}, "
+                            f"duration={esc_outcome.duration_seconds:.1f}s"
+                        ),
+                    )
+                )
+                if esc_outcome.human_took_control:
+                    continue
 
             duration_ms = int((time.monotonic() - start_perf) * 1000)
             record = StepExecutionRecord(
@@ -800,14 +956,34 @@ async def replay_artifact(
     escalations: list[Escalation] = []
     outputs: dict[str, Any] = {}
 
+    # Human-in-the-loop escalation requires a browser window a human can
+    # actually see and click on, and a Chrome DevTools Protocol port they can
+    # attach to independently of Playwright's own connection - a headless
+    # browser satisfies neither. `enable_escalation` therefore always wins
+    # over `headless` rather than silently escalating into a browser no one
+    # can reach.
+    if config.enable_escalation and config.headless:
+        logger.warning("enable_escalation=True requires a visible browser; overriding headless=True to False")
+    launch_headless = False if config.enable_escalation else config.headless
+    launch_args = [f"--remote-debugging-port={config.cdp_port}"] if config.enable_escalation else None
+
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=config.headless)
+        browser = await playwright.chromium.launch(headless=launch_headless, args=launch_args)
         page = await browser.new_page()
         try:
             outcome: ExecutionOutcome | None = None
             for step_index, step in enumerate(artifact.steps):
                 record, stop_outcome = await _execute_step(
-                    page, artifact, step, step_index, inputs, permitted_domains, outputs, escalations
+                    page,
+                    artifact,
+                    step,
+                    step_index,
+                    inputs,
+                    permitted_domains,
+                    outputs,
+                    escalations,
+                    execution_log,
+                    config,
                 )
                 execution_log.append(record)
                 if stop_outcome is not None:
@@ -834,6 +1010,10 @@ async def replay_artifact(
                     outcome = SuccessOutcome(outputs=outputs)
         finally:
             await browser.close()
+            if config.enable_escalation:
+                hub = get_hub()
+                hub.mark_completed()
+                await hub.shutdown_server()
 
     completed_at = datetime.now(timezone.utc)
     total_duration_ms = int((completed_at - started_at).total_seconds() * 1000)
