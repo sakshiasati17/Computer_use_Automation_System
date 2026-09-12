@@ -34,6 +34,7 @@ from uuid import uuid4
 from playwright.async_api import Frame, Locator, Page, async_playwright
 
 from ..handoff import DEFAULT_CDP_PORT, DEFAULT_OPERATOR_PORT, EscalationReason, escalate, get_hub
+from ..observability import RunEvidence, RunLogger, RunOutcome, RunType, save_evidence
 from ..safety import check_action, check_url, classify_action
 from ..models import (
     ActionType,
@@ -999,6 +1000,34 @@ def _load_artifact(artifact_path: str | Path) -> Artifact:
     return Artifact.model_validate_json(path.read_text())
 
 
+def _run_outcome_and_error_details(outcome: ExecutionOutcome) -> tuple[RunOutcome, dict[str, Any] | None]:
+    """Map the three-way `ExecutionOutcome` to a `RunOutcome` plus debugging context.
+
+    A `HardFailureOutcome`/`BusinessOutcomeOutcome` already carries everything
+    worth keeping (see `src/models/results.py`); this just reshapes it into
+    the run-level `error_details` bucket instead of re-deriving it.
+    """
+    if isinstance(outcome, SuccessOutcome):
+        return RunOutcome.SUCCESS, None
+    if isinstance(outcome, BusinessOutcomeOutcome):
+        return RunOutcome.BUSINESS_OUTCOME, {
+            "outcome_name": outcome.outcome_name,
+            "description": outcome.description,
+            "severity": outcome.severity.value,
+            "extracted_data": outcome.extracted_data,
+        }
+    return RunOutcome.HARD_FAILURE, {
+        "failed_step_id": outcome.failed_step_id,
+        "action_attempted": outcome.action_attempted.value,
+        "expected": outcome.expected,
+        "observed": outcome.observed,
+        "exception_type": outcome.exception_type,
+        "message": outcome.message,
+        "screenshot_path": outcome.screenshot_path,
+        "page_url": outcome.page_url,
+    }
+
+
 async def replay_artifact(
     artifact_path: str | Path,
     input_params: dict[str, Any],
@@ -1021,6 +1050,9 @@ async def replay_artifact(
     escalations: list[Escalation] = []
     outputs: dict[str, Any] = {}
 
+    run_logger = RunLogger(RunType.REPLAY, artifact_name=artifact.name, input_params=inputs)
+    evidence: RunEvidence | None = None
+
     # Human-in-the-loop escalation requires a browser window a human can
     # actually see and click on, and a Chrome DevTools Protocol port they can
     # attach to independently of Playwright's own connection - a headless
@@ -1035,6 +1067,7 @@ async def replay_artifact(
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=launch_headless, args=launch_args)
         page = await browser.new_page()
+        run_logger.set_page(page)
         try:
             outcome: ExecutionOutcome | None = None
             for step_index, step in enumerate(artifact.steps):
@@ -1051,6 +1084,38 @@ async def replay_artifact(
                     config,
                 )
                 execution_log.append(record)
+
+                step_screenshot_path: str | None = None
+                step_page_url: str | None = None
+                if isinstance(stop_outcome, HardFailureOutcome):
+                    step_screenshot_path = stop_outcome.screenshot_path
+                    step_page_url = stop_outcome.page_url
+                    if stop_outcome.exception_type == "SafetyViolationError":
+                        run_logger.record_safety_violation(
+                            {
+                                "step_id": step.step_id,
+                                "expected": stop_outcome.expected,
+                                "observed": stop_outcome.observed,
+                                "message": stop_outcome.message,
+                            }
+                        )
+                run_logger.record_step(
+                    step_id=record.step_id,
+                    action=record.action.value,
+                    target=step.description,
+                    value=step.value,
+                    result=record.status.value,
+                    duration_ms=record.duration_ms,
+                    started_at=record.started_at,
+                    screenshot_path=step_screenshot_path,
+                    error_message=record.error_message,
+                    page_url=step_page_url,
+                    retries=record.retries,
+                    extra={"locator_attempts": [a.model_dump(mode="json") for a in record.locator_attempts]}
+                    if record.locator_attempts
+                    else {},
+                )
+
                 if stop_outcome is not None:
                     outcome = stop_outcome
                     break
@@ -1059,6 +1124,7 @@ async def replay_artifact(
                 # Artifact.steps has min_length=1, so there is always a last step to
                 # attribute this check to.
                 last_step = artifact.steps[-1]
+                condition_start = run_logger.start_timer()
                 if not await _wait_for_condition(page, artifact.success_condition, inputs, timeout_ms=5000):
                     screenshot_path = await _save_failure_screenshot(page, artifact, last_step)
                     outcome = HardFailureOutcome(
@@ -1071,14 +1137,38 @@ async def replay_artifact(
                         exception_type="SuccessConditionNotMet",
                         message="all steps passed their own checkpoints, but the artifact's overall success_condition was not met",
                     )
+                    run_logger.record_step(
+                        step_id="success_condition_check",
+                        action="wait",
+                        result="failed",
+                        start_perf=condition_start,
+                        screenshot_path=screenshot_path,
+                        error_message=outcome.message,
+                        page_url=page.url,
+                    )
                 else:
                     outcome = SuccessOutcome(outputs=outputs)
+                    run_logger.record_step(
+                        step_id="success_condition_check",
+                        action="wait",
+                        result="passed",
+                        start_perf=condition_start,
+                        page_url=page.url,
+                    )
+
+            for escalation in escalations:
+                run_logger.record_escalation(escalation)
+            run_outcome, error_details = _run_outcome_and_error_details(outcome)
+            evidence = await run_logger.finish(run_outcome, error_details=error_details)
         finally:
             await browser.close()
             if config.enable_escalation:
                 hub = get_hub()
                 hub.mark_completed()
                 await hub.shutdown_server()
+
+    if evidence is not None:
+        save_evidence(evidence)
 
     completed_at = datetime.now(timezone.utc)
     total_duration_ms = int((completed_at - started_at).total_seconds() * 1000)

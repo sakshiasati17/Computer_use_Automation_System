@@ -33,6 +33,7 @@ from typing import Any
 from playwright.async_api import Frame, Page, async_playwright
 
 from ..artifacts.emitter import emit_artifact
+from ..observability import RunLogger, RunOutcome, RunType, save_evidence
 from ..safety import check_action, check_url, classify_action, redact_dict
 from .observer import AgentAction, AgentActionType, observe_and_decide
 
@@ -397,8 +398,14 @@ async def run_discovery(goal: str, target: str, max_steps: int = DEFAULT_MAX_STE
         "dialogs_seen": [],
     }
 
+    run_logger = RunLogger(
+        RunType.DISCOVERY,
+        goal=goal,
+        input_params={"target_url": target, "max_steps": max_steps},
+    )
+
     try:
-        await _run_session(goal, target, max_steps, log, screenshots_dir)
+        await _run_session(goal, target, max_steps, log, screenshots_dir, run_logger)
     finally:
         # Redact before anything touches disk; `log` itself stays unredacted
         # in memory so emit_artifact (below) and the return value still see
@@ -426,11 +433,16 @@ async def run_discovery(goal: str, target: str, max_steps: int = DEFAULT_MAX_STE
             log["failure_log_path"] = str(failure_path)
             logger.warning("discovery ended without success: %s", log["outcome"])
 
+        run_outcome = RunOutcome.SUCCESS if log["outcome"] == "goal_complete" else RunOutcome.HARD_FAILURE
+        evidence = await run_logger.finish(run_outcome, error_details=log.get("failure_context"))
+        evidence_path = save_evidence(evidence)
+        log["evidence_path"] = str(evidence_path)
+
     return log
 
 
 async def _run_session(
-    goal: str, target: str, max_steps: int, log: dict[str, Any], screenshots_dir: Path
+    goal: str, target: str, max_steps: int, log: dict[str, Any], screenshots_dir: Path, run_logger: RunLogger
 ) -> None:
     """Own the browser lifecycle and run the loop, mutating `log` in place.
 
@@ -442,6 +454,7 @@ async def _run_session(
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=False)
         page = await browser.new_page()
+        run_logger.set_page(page)
 
         async def _on_dialog(dialog: Any) -> None:
             log["dialogs_seen"].append({"type": dialog.type, "message": dialog.message})
@@ -454,8 +467,10 @@ async def _run_session(
         try:
             await page.goto(target)
 
+            initial_step_start = run_logger.start_timer()
             initial_screenshot = screenshots_dir / "step_0.png"
             await _screenshot(page, initial_screenshot)
+            initial_page_title = await page.title()
             log["steps"].append(
                 {
                     "step_number": 0,
@@ -473,13 +488,26 @@ async def _run_session(
                     "error_message": None,
                     "resolution": None,
                     "page_url": page.url,
-                    "page_title": await page.title(),
+                    "page_title": initial_page_title,
                     "page_text_snippet": await _capture_page_text(page),
                     "extracted_data": None,
                 }
             )
+            run_logger.record_step(
+                step_id="step_0_navigate",
+                action="navigate",
+                target="Initial navigation to the target URL.",
+                value=target,
+                result="passed",
+                start_perf=initial_step_start,
+                screenshot_path=_relative_path(initial_screenshot),
+                reasoning="Navigate to the starting URL for this flow.",
+                page_url=page.url,
+                page_title=initial_page_title,
+            )
 
             for step_number in range(1, max_steps + 1):
+                step_start = run_logger.start_timer()
                 try:
                     action = await observe_and_decide(page, goal, step_history)
                 except Exception as exc:  # noqa: BLE001 - treat as stuck, don't crash the run
@@ -509,6 +537,19 @@ async def _run_session(
                             "page_text_snippet": await _capture_page_text(page),
                             "extracted_data": None,
                         }
+                    )
+                    run_logger.record_step(
+                        step_id=f"step_{step_number}_stuck",
+                        action="stuck",
+                        result="failed",
+                        start_perf=step_start,
+                        screenshot_path=failure_screenshot_rel,
+                        error_message=str(exc),
+                        page_url=page.url,
+                        page_title=await page.title(),
+                    )
+                    log["failure_context"] = await run_logger.capture_failure_context(
+                        f"observe_and_decide_failed_step_{step_number}"
                     )
                     break
 
@@ -547,6 +588,14 @@ async def _run_session(
                     success = False
                     error_message = blocked_reason
                     logger.warning("step %d blocked by safety policy: %s", step_number, blocked_reason)
+                    run_logger.record_safety_violation(
+                        {
+                            "step_number": step_number,
+                            "action_type": action.action_type.value,
+                            "risk_level": risk_level,
+                            "reason": blocked_reason,
+                        }
+                    )
                 else:
                     try:
                         if action.action_type is AgentActionType.NAVIGATE:
@@ -606,6 +655,25 @@ async def _run_session(
                         "success": success,
                     }
                 )
+                run_logger.record_step(
+                    step_id=f"step_{step_number}_{action.action_type.value}",
+                    action=action.action_type.value,
+                    target=action.target_description,
+                    value=action.value,
+                    result="blocked" if blocked_reason is not None else ("passed" if success else "failed"),
+                    start_perf=step_start,
+                    screenshot_path=_relative_path(screenshot_path),
+                    reasoning=action.reasoning,
+                    error_message=error_message,
+                    page_url=step_record["page_url"],
+                    page_title=step_record["page_title"],
+                    extra={
+                        "risk_level": risk_level,
+                        "safety_blocked": blocked_reason is not None,
+                        "resolution": step_record["resolution"],
+                        "extracted_data": action.extracted_data,
+                    },
+                )
 
                 if action.action_type is AgentActionType.GOAL_COMPLETE:
                     log["outcome"] = "goal_complete"
@@ -614,9 +682,13 @@ async def _run_session(
                 if action.action_type is AgentActionType.STUCK:
                     log["outcome"] = "stuck"
                     log["stuck_reason"] = action.stuck_reason
+                    log["failure_context"] = await run_logger.capture_failure_context(
+                        f"agent_stuck_step_{step_number}"
+                    )
                     break
             else:
                 log["outcome"] = "max_steps_reached"
+                log["failure_context"] = await run_logger.capture_failure_context("max_steps_reached")
         finally:
             log["completed_at"] = datetime.now(timezone.utc).isoformat()
             await browser.close()
