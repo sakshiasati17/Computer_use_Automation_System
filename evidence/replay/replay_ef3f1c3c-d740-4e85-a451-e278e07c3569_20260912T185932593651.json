@@ -1,0 +1,448 @@
+{
+  "run_id": "ef3f1c3c-d740-4e85-a451-e278e07c3569",
+  "run_type": "replay",
+  "started_at": "2026-09-12T18:59:28.801968Z",
+  "completed_at": "2026-09-12T18:59:32.593651Z",
+  "goal": null,
+  "artifact_name": "open_new_account",
+  "input_params": {
+    "username": "admin",
+    "password": "[REDACTED-PWD]",
+    "member_id": "M-1001",
+    "deposit_amount": "100.00"
+  },
+  "outcome": "SUCCESS",
+  "steps": [
+    {
+      "step_id": "navigate_login",
+      "action": "navigate",
+      "target": "Navigate to the member portal login page.",
+      "value": "http://127.0.0.1:5000/login",
+      "result": "passed",
+      "duration_ms": 77,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.490737Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {}
+    },
+    {
+      "step_id": "login_enter_username",
+      "action": "type",
+      "target": "Type the username into the login field.",
+      "value": "{{input.username}}",
+      "result": "passed",
+      "duration_ms": 34,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.568062Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "login_enter_password",
+      "action": "type",
+      "target": "Type the password into the login field.",
+      "value": "{{input.password}}",
+      "result": "passed",
+      "duration_ms": 18,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.602285Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "login_submit",
+      "action": "click",
+      "target": "Click the Log In button.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 56,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.621313Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "search_enter_member_id",
+      "action": "type",
+      "target": "Type the member ID into the search field.",
+      "value": "{{input.member_id}}",
+      "result": "passed",
+      "duration_ms": 12,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.677988Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "search_submit",
+      "action": "click",
+      "target": "Click the Search button.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 50,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.690711Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "open_new_account_click",
+      "action": "click",
+      "target": "Click 'Open New Account' on the member detail page.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 65,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.741501Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "select_account_type_savings",
+      "action": "select",
+      "target": "Select 'Savings' as the account type.",
+      "value": "Savings",
+      "result": "passed",
+      "duration_ms": 2709,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:29.806894Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "medium",
+            "succeeded": false,
+            "error_message": "no matching element found"
+          },
+          {
+            "strategy": "css",
+            "confidence": "medium",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "enter_deposit_amount",
+      "action": "type",
+      "target": "Type the initial deposit amount.",
+      "value": "{{input.deposit_amount}}",
+      "result": "passed",
+      "duration_ms": 8,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:32.516921Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "confirm_create_account",
+      "action": "click",
+      "target": "Click 'Confirm and Create Account' to submit the new sub-account.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 51,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:32.525130Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "extract_member_name",
+      "action": "extract",
+      "target": "Extract member_name from the confirmation page.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 12,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:32.577151Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "extract_account_type",
+      "action": "extract",
+      "target": "Extract account_type from the confirmation page.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 1,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:32.589258Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "extract_initial_deposit",
+      "action": "extract",
+      "target": "Extract initial_deposit from the confirmation page.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 1,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:32.590868Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "success_condition_check",
+      "action": "wait",
+      "target": null,
+      "value": null,
+      "result": "passed",
+      "duration_ms": 1,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T18:59:28.801968Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": "http://127.0.0.1:5000/member/M-1001/confirmation",
+      "page_title": null,
+      "retries": 0,
+      "extra": {}
+    }
+  ],
+  "escalations": [
+    {
+      "escalation_id": "9f4b06a3-e41e-47f9-95d7-6b8dc82b13bf",
+      "step_id": "login_submit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:29.621572Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "2a85a757-bcb1-4d12-a467-3885765ab2df",
+      "step_id": "search_submit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:29.690873Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "67747aa6-f211-47ab-bf30-e0fdbf78baaa",
+      "step_id": "select_account_type_savings",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:29.807074Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "5010dfa6-1f94-4a27-b7a6-296afb7fb2d3",
+      "step_id": "enter_deposit_amount",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:32.517223Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "4511909a-64ad-4aa5-9f37-86b4de0c9d0f",
+      "step_id": "confirm_create_account",
+      "reason": "step risk_level=irreversible",
+      "risk_level": "irreversible",
+      "requested_at": "2026-09-12T18:59:32.525293Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "3cc98213-c0a8-4e90-a0f6-a4a5c9f83771",
+      "step_id": "extract_member_name",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:32.577817Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "c01942ba-bbe8-4d28-980a-c067dfe12ce7",
+      "step_id": "extract_account_type",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:32.589402Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "eb418b07-c1a9-4544-b697-bed82e9675d7",
+      "step_id": "extract_initial_deposit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T18:59:32.590983Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    }
+  ],
+  "safety_violations": [],
+  "total_duration_ms": 3791,
+  "error_details": null
+}

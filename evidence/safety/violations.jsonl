@@ -1,0 +1,2 @@
+{"timestamp": "2026-09-12T06:36:46.558695+00:00", "violation_type": "domain_not_permitted", "url": "https://google.com", "netloc": "google.com", "permitted_domains": ["localhost", "127.0.0.1"]}
+{"timestamp": "2026-09-12T06:37:05.560516+00:00", "violation_type": "domain_not_permitted", "url": "https://google.com", "netloc": "google.com", "permitted_domains": ["localhost", "127.0.0.1"]}

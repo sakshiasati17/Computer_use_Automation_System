@@ -1,0 +1,154 @@
+2026-09-12 12:01:04,054 WARNING step login_submit: risk re-classified from safe to risky at replay time (config/risk_rules.json)
+2026-09-12 12:01:04,054 WARNING step login_submit has risk_level=risky but enable_escalation=False; proceeding unattended
+2026-09-12 12:01:04,123 WARNING step search_submit: risk re-classified from safe to risky at replay time (config/risk_rules.json)
+2026-09-12 12:01:04,123 WARNING step search_submit has risk_level=risky but enable_escalation=False; proceeding unattended
+{
+  "run_id": "010d3bb2-8215-4c92-b61c-8ae0d59af089",
+  "artifact_name": "open_new_account",
+  "artifact_version": 1,
+  "input_params": {
+    "username": "admin",
+    "password": "admin123",
+    "member_id": "M-9999",
+    "deposit_amount": "100.00"
+  },
+  "started_at": "2026-09-12T19:01:03.253320Z",
+  "completed_at": "2026-09-12T19:01:12.369672Z",
+  "total_duration_ms": 9116,
+  "outcome": {
+    "type": "business_outcome",
+    "outcome_name": "member_not_found",
+    "description": "The searched member ID does not exist in the system. This is a normal, expected search result, not a system error.",
+    "severity": "expected",
+    "extracted_data": {
+      "member_id": "M-9999"
+    }
+  },
+  "execution_log": [
+    {
+      "step_id": "navigate_login",
+      "action": "navigate",
+      "description": "Navigate to the member portal login page.",
+      "status": "passed",
+      "started_at": "2026-09-12T19:01:03.924720Z",
+      "duration_ms": 71,
+      "retries": 0,
+      "locator_attempts": [],
+      "error_message": null
+    },
+    {
+      "step_id": "login_enter_username",
+      "action": "type",
+      "description": "Type the username into the login field.",
+      "status": "passed",
+      "started_at": "2026-09-12T19:01:03.997483Z",
+      "duration_ms": 37,
+      "retries": 0,
+      "locator_attempts": [
+        {
+          "strategy": "text_near",
+          "confidence": "high",
+          "succeeded": true,
+          "error_message": null
+        }
+      ],
+      "error_message": null
+    },
+    {
+      "step_id": "login_enter_password",
+      "action": "type",
+      "description": "Type the password into the login field.",
+      "status": "passed",
+      "started_at": "2026-09-12T19:01:04.034860Z",
+      "duration_ms": 19,
+      "retries": 0,
+      "locator_attempts": [
+        {
+          "strategy": "text_near",
+          "confidence": "high",
+          "succeeded": true,
+          "error_message": null
+        }
+      ],
+      "error_message": null
+    },
+    {
+      "step_id": "login_submit",
+      "action": "click",
+      "description": "Click the Log In button.",
+      "status": "passed",
+      "started_at": "2026-09-12T19:01:04.054562Z",
+      "duration_ms": 55,
+      "retries": 0,
+      "locator_attempts": [
+        {
+          "strategy": "aria_role",
+          "confidence": "high",
+          "succeeded": true,
+          "error_message": null
+        }
+      ],
+      "error_message": null
+    },
+    {
+      "step_id": "search_enter_member_id",
+      "action": "type",
+      "description": "Type the member ID into the search field.",
+      "status": "passed",
+      "started_at": "2026-09-12T19:01:04.110315Z",
+      "duration_ms": 12,
+      "retries": 0,
+      "locator_attempts": [
+        {
+          "strategy": "text_near",
+          "confidence": "high",
+          "succeeded": true,
+          "error_message": null
+        }
+      ],
+      "error_message": null
+    },
+    {
+      "step_id": "search_submit",
+      "action": "click",
+      "description": "Click the Search button.",
+      "status": "failed",
+      "started_at": "2026-09-12T19:01:04.123278Z",
+      "duration_ms": 8216,
+      "retries": 0,
+      "locator_attempts": [
+        {
+          "strategy": "aria_role",
+          "confidence": "high",
+          "succeeded": true,
+          "error_message": null
+        }
+      ],
+      "error_message": "checkpoint not met; matched business outcome 'member_not_found' instead"
+    }
+  ],
+  "escalations": [
+    {
+      "escalation_id": "f418cf00-73c1-47bb-a5df-11de7c5874a1",
+      "step_id": "login_submit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T19:01:04.054771Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "78a80101-e9a1-4789-bee0-9d7f11446c1b",
+      "step_id": "search_submit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T19:01:04.123409Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    }
+  ]
+}

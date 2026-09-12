@@ -1,0 +1,190 @@
+{
+  "run_id": "c6f0e86c-0d1d-417d-9edc-661b562ee469",
+  "run_type": "replay",
+  "started_at": "2026-09-12T19:00:18.608273Z",
+  "completed_at": "2026-09-12T19:00:27.180698Z",
+  "goal": null,
+  "artifact_name": "open_new_account",
+  "input_params": {
+    "username": "admin",
+    "password": "[REDACTED-PWD]",
+    "member_id": "M-9999",
+    "deposit_amount": "100.00"
+  },
+  "outcome": "BUSINESS_OUTCOME",
+  "steps": [
+    {
+      "step_id": "navigate_login",
+      "action": "navigate",
+      "target": "Navigate to the member portal login page.",
+      "value": "http://127.0.0.1:5000/login",
+      "result": "passed",
+      "duration_ms": 25,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T19:00:18.859151Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {}
+    },
+    {
+      "step_id": "login_enter_username",
+      "action": "type",
+      "target": "Type the username into the login field.",
+      "value": "{{input.username}}",
+      "result": "passed",
+      "duration_ms": 18,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T19:00:18.885122Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "login_enter_password",
+      "action": "type",
+      "target": "Type the password into the login field.",
+      "value": "{{input.password}}",
+      "result": "passed",
+      "duration_ms": 17,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T19:00:18.904134Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "login_submit",
+      "action": "click",
+      "target": "Click the Log In button.",
+      "value": null,
+      "result": "passed",
+      "duration_ms": 52,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T19:00:18.921458Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "search_enter_member_id",
+      "action": "type",
+      "target": "Type the member ID into the search field.",
+      "value": "{{input.member_id}}",
+      "result": "passed",
+      "duration_ms": 13,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T19:00:18.974357Z",
+      "reasoning": null,
+      "error_message": null,
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "text_near",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    },
+    {
+      "step_id": "search_submit",
+      "action": "click",
+      "target": "Click the Search button.",
+      "value": null,
+      "result": "failed",
+      "duration_ms": 8192,
+      "screenshot_path": null,
+      "started_at": "2026-09-12T19:00:18.988187Z",
+      "reasoning": null,
+      "error_message": "checkpoint not met; matched business outcome 'member_not_found' instead",
+      "page_url": null,
+      "page_title": null,
+      "retries": 0,
+      "extra": {
+        "locator_attempts": [
+          {
+            "strategy": "aria_role",
+            "confidence": "high",
+            "succeeded": true,
+            "error_message": null
+          }
+        ]
+      }
+    }
+  ],
+  "escalations": [
+    {
+      "escalation_id": "3db534da-dbda-400a-b30b-cf0b2872d56c",
+      "step_id": "login_submit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T19:00:18.921659Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    },
+    {
+      "escalation_id": "e4d73f1d-a9fa-4a6d-9723-deb79fb21c79",
+      "step_id": "search_submit",
+      "reason": "step risk_level=risky",
+      "risk_level": "risky",
+      "requested_at": "2026-09-12T19:00:18.988308Z",
+      "resolution": "pending",
+      "resolved_at": null,
+      "resolved_by": null,
+      "notes": null
+    }
+  ],
+  "safety_violations": [],
+  "total_duration_ms": 8572,
+  "error_details": {
+    "outcome_name": "member_not_found",
+    "description": "The searched member ID does not exist in the system. This is a normal, expected search result, not a system error.",
+    "severity": "expected",
+    "extracted_data": {}
+  }
+}

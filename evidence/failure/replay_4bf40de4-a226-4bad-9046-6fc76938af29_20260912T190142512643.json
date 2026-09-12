@@ -1,0 +1,46 @@
+{
+  "run_id": "4bf40de4-a226-4bad-9046-6fc76938af29",
+  "run_type": "replay",
+  "started_at": "2026-09-12T19:01:33.606084Z",
+  "completed_at": "2026-09-12T19:01:42.512643Z",
+  "goal": null,
+  "artifact_name": "open_new_account",
+  "input_params": {
+    "username": "admin",
+    "password": "[REDACTED-PWD]",
+    "member_id": "M-1001",
+    "deposit_amount": "100.00"
+  },
+  "outcome": "HARD_FAILURE",
+  "steps": [
+    {
+      "step_id": "navigate_login",
+      "action": "navigate",
+      "target": "Navigate to the member portal login page.",
+      "value": "http://127.0.0.1:5000/login",
+      "result": "failed",
+      "duration_ms": 8123,
+      "screenshot_path": "/Users/sakshiasati/Documents/Computer_use_Automation_System/evidence/failure/open_new_account_navigate_login_20260912T190142483781.png",
+      "started_at": "2026-09-12T19:01:34.358949Z",
+      "reasoning": null,
+      "error_message": "checkpoint never became true for step 'navigate_login'",
+      "page_url": "http://127.0.0.1:5000/login",
+      "page_title": null,
+      "retries": 0,
+      "extra": {}
+    }
+  ],
+  "escalations": [],
+  "safety_violations": [],
+  "total_duration_ms": 8906,
+  "error_details": {
+    "failed_step_id": "navigate_login",
+    "action_attempted": "navigate",
+    "expected": "element visible (text='Member Portal Login', role=None)",
+    "observed": "url='http://127.0.0.1:5000/login', visible_text=''",
+    "exception_type": "CheckpointFailedError",
+    "message": "checkpoint never became true for step 'navigate_login'",
+    "screenshot_path": "/Users/sakshiasati/Documents/Computer_use_Automation_System/evidence/failure/open_new_account_navigate_login_20260912T190142483781.png",
+    "page_url": "http://127.0.0.1:5000/login"
+  }
+}

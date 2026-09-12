@@ -408,6 +408,75 @@
       "risk_level": "irreversible",
       "timeout_ms": 8000,
       "pre_conditions": null
+    },
+    {
+      "step_id": "extract_member_name",
+      "description": "Extract member_name from the confirmation page.",
+      "action": "extract",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "The confirmation page is a stable, generated table row pairing a fixed label cell with a value cell; label text does not vary by tenant branding.",
+            "strategy": "text_near",
+            "anchor_text": "Member Name:",
+            "relation": "right_of",
+            "element_type": "td"
+          }
+        ]
+      },
+      "value": null,
+      "output_field": "member_name",
+      "checkpoint": null,
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "extract_account_type",
+      "description": "Extract account_type from the confirmation page.",
+      "action": "extract",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Same stable label/value table row pattern as member_name.",
+            "strategy": "text_near",
+            "anchor_text": "Account Type:",
+            "relation": "right_of",
+            "element_type": "td"
+          }
+        ]
+      },
+      "value": null,
+      "output_field": "account_type",
+      "checkpoint": null,
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "extract_initial_deposit",
+      "description": "Extract initial_deposit from the confirmation page.",
+      "action": "extract",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Same stable label/value table row pattern as member_name.",
+            "strategy": "text_near",
+            "anchor_text": "Initial Deposit:",
+            "relation": "right_of",
+            "element_type": "td"
+          }
+        ]
+      },
+      "value": null,
+      "output_field": "initial_deposit",
+      "checkpoint": null,
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
     }
   ],
   "business_outcomes": [
@@ -421,7 +490,7 @@
       },
       "severity": "expected",
       "data_to_extract": {
-        "searched_member_id": "The member ID that was entered into the search field."
+        "member_id": "The member ID that was entered into the search field."
       }
     },
     {
@@ -434,7 +503,7 @@
       },
       "severity": "expected",
       "data_to_extract": {
-        "attempted_deposit_amount": "The deposit amount that was rejected."
+        "deposit_amount": "The deposit amount that was rejected."
       }
     }
   ],

@@ -1,0 +1,504 @@
+{
+  "schema_version": "1.0.0",
+  "name": "log_in_to_the_member_portal_using_username",
+  "version": 1,
+  "description": "Log in to the member portal using username 'admin' and password 'admin123'. Then find member M-1001 and open a new Savings sub-account for them with a .00 initial deposit, confirming creation.",
+  "created_at": "2026-09-12T19:12:30.462853Z",
+  "created_by": "discovery-agent-v1",
+  "target": {
+    "surface_type": "web",
+    "entry_url": "http://127.0.0.1:5000/login",
+    "app_name": "Fidelity Trust Credit Union - Member Portal Login"
+  },
+  "inputs": [
+    {
+      "name": "username",
+      "type": "string",
+      "required": true,
+      "description": "Value entered for the field labeled 'Username:'.",
+      "default_value": null
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "required": true,
+      "description": "Value entered for the field labeled 'Password:'.",
+      "default_value": null
+    },
+    {
+      "name": "member_id",
+      "type": "string",
+      "required": true,
+      "description": "Value entered for the field labeled 'Member ID:'.",
+      "default_value": null
+    },
+    {
+      "name": "initial_deposit_amount",
+      "type": "string",
+      "required": true,
+      "description": "Value entered for the field labeled 'Initial Deposit Amount:'.",
+      "default_value": null
+    }
+  ],
+  "outputs": [],
+  "steps": [
+    {
+      "step_id": "navigate_initial_navigation_to_the_target_url",
+      "description": "Navigate to the starting URL for this flow.",
+      "action": "navigate",
+      "target": null,
+      "value": "http://127.0.0.1:5000/login",
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/login",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "type_the_textbox_in_the_row_labeled_username",
+      "description": "I need to enter the username 'admin' in the Username field to log in.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Discovered by proximity to the label text 'Username:'; this legacy layout has no name/id association between the label and its field.",
+            "strategy": "text_near",
+            "anchor_text": "Username:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "The 'username' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+            "strategy": "css",
+            "selector": "input[name='username']"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 667,
+            "y": 136,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": "{{input.username}}",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_has_value",
+        "target": {
+          "locators": [
+            {
+              "confidence": "high",
+              "rationale": "Discovered by proximity to the label text 'Username:'; this legacy layout has no name/id association between the label and its field.",
+              "strategy": "text_near",
+              "anchor_text": "Username:",
+              "relation": "right_of",
+              "element_type": "input"
+            },
+            {
+              "confidence": "medium",
+              "rationale": "The 'username' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+              "strategy": "css",
+              "selector": "input[name='username']"
+            },
+            {
+              "confidence": "low",
+              "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+              "strategy": "coordinates",
+              "x": 667,
+              "y": 136,
+              "viewport_width": null,
+              "viewport_height": null
+            }
+          ]
+        },
+        "expected_value": "{{input.username}}"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "type_the_textbox_in_the_row_labeled_password",
+      "description": "I need to enter the password 'admin123' in the Password field to complete the login credentials.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Discovered by proximity to the label text 'Password:'; this legacy layout has no name/id association between the label and its field.",
+            "strategy": "text_near",
+            "anchor_text": "Password:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "The 'password' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+            "strategy": "css",
+            "selector": "input[name='password']"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 667,
+            "y": 165,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": "{{input.password}}",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_has_value",
+        "target": {
+          "locators": [
+            {
+              "confidence": "high",
+              "rationale": "Discovered by proximity to the label text 'Password:'; this legacy layout has no name/id association between the label and its field.",
+              "strategy": "text_near",
+              "anchor_text": "Password:",
+              "relation": "right_of",
+              "element_type": "input"
+            },
+            {
+              "confidence": "medium",
+              "rationale": "The 'password' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+              "strategy": "css",
+              "selector": "input[name='password']"
+            },
+            {
+              "confidence": "low",
+              "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+              "strategy": "coordinates",
+              "x": 667,
+              "y": 165,
+              "viewport_width": null,
+              "viewport_height": null
+            }
+          ]
+        },
+        "expected_value": "{{input.password}}"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "click_log_in",
+      "description": "Both username 'admin' and password 'admin123' have been entered. Now I need to click the 'Log In' button to submit the login form.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Matched by ARIA role and accessible name during discovery.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Log In"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 640,
+            "y": 221,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/search",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "type_the_textbox_in_the_row_labeled_member_id",
+      "description": "I need to search for member M-1001. I'll type the member ID into the Member ID textbox and then click Search.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Discovered by proximity to the label text 'Member ID:'; this legacy layout has no name/id association between the label and its field.",
+            "strategy": "text_near",
+            "anchor_text": "Member ID:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "The 'member_id' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+            "strategy": "css",
+            "selector": "input[name='member_id']"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 638,
+            "y": 118,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": "{{input.member_id}}",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_has_value",
+        "target": {
+          "locators": [
+            {
+              "confidence": "high",
+              "rationale": "Discovered by proximity to the label text 'Member ID:'; this legacy layout has no name/id association between the label and its field.",
+              "strategy": "text_near",
+              "anchor_text": "Member ID:",
+              "relation": "right_of",
+              "element_type": "input"
+            },
+            {
+              "confidence": "medium",
+              "rationale": "The 'member_id' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+              "strategy": "css",
+              "selector": "input[name='member_id']"
+            },
+            {
+              "confidence": "low",
+              "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+              "strategy": "coordinates",
+              "x": 638,
+              "y": 118,
+              "viewport_width": null,
+              "viewport_height": null
+            }
+          ]
+        },
+        "expected_value": "{{input.member_id}}"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "click_search",
+      "description": "I've already typed 'M-1001' in the Member ID field. Now I need to click the 'Search' button to find member M-1001.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Matched by ARIA role and accessible name during discovery.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Search"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 640,
+            "y": 174,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/member/M-1001",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "click_open_new_account",
+      "description": "I can see member M-1001 (Jane Smith) has been found and their details are displayed. Now I need to click the 'Open New Account' button to initiate opening a new Savings sub-account for this member.",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Matched by ARIA role and accessible name during discovery.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": "Open New Account"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 640,
+            "y": 368,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/member/M-1001/new-account",
+        "match_type": "contains"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "type_the_textbox_in_the_row_labeled_initial_deposit_amount",
+      "description": "The form is showing the 'Open New Sub-Account' page for Jane Smith (M-1001). The Account Type dropdown is already set to 'Savings', which is what we need. Now I need to enter the initial deposit amount of $100.00 in the 'Initial Deposit Amount' textbox before clicking the confirm button.",
+      "action": "type",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Discovered by proximity to the label text 'Initial Deposit Amount:'; this legacy layout has no name/id association between the label and its field.",
+            "strategy": "text_near",
+            "anchor_text": "Initial Deposit Amount:",
+            "relation": "right_of",
+            "element_type": "input"
+          },
+          {
+            "confidence": "medium",
+            "rationale": "The 'deposit' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+            "strategy": "css",
+            "selector": "input[name='deposit']"
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 655,
+            "y": 145,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": "{{input.initial_deposit_amount}}",
+      "output_field": null,
+      "checkpoint": {
+        "type": "element_has_value",
+        "target": {
+          "locators": [
+            {
+              "confidence": "high",
+              "rationale": "Discovered by proximity to the label text 'Initial Deposit Amount:'; this legacy layout has no name/id association between the label and its field.",
+              "strategy": "text_near",
+              "anchor_text": "Initial Deposit Amount:",
+              "relation": "right_of",
+              "element_type": "input"
+            },
+            {
+              "confidence": "medium",
+              "rationale": "The 'deposit' form field name is part of the HTML contract and typically more stable than surrounding markup, even where CSS classes/ids are not.",
+              "strategy": "css",
+              "selector": "input[name='deposit']"
+            },
+            {
+              "confidence": "low",
+              "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+              "strategy": "coordinates",
+              "x": 655,
+              "y": 145,
+              "viewport_width": null,
+              "viewport_height": null
+            }
+          ]
+        },
+        "expected_value": "{{input.initial_deposit_amount}}"
+      },
+      "risk_level": "safe",
+      "timeout_ms": 5000,
+      "pre_conditions": null
+    },
+    {
+      "step_id": "click_confirm_and_create_account",
+      "description": "The form is filled out correctly: Account Type is 'Savings' and Initial Deposit Amount is '100.00'. Now I need to click the 'Confirm and Create Account' button to finalize the creation of the new Savings sub-account for Jane Smith (M-1001).",
+      "action": "click",
+      "target": {
+        "locators": [
+          {
+            "confidence": "high",
+            "rationale": "Matched by ARIA role and accessible name during discovery.",
+            "strategy": "aria_role",
+            "role": "button",
+            "name": null
+          },
+          {
+            "confidence": "low",
+            "rationale": "Last-resort fallback captured from the element's on-screen position during discovery; breaks under any layout reflow or viewport change.",
+            "strategy": "coordinates",
+            "x": 640,
+            "y": 201,
+            "viewport_width": null,
+            "viewport_height": null
+          }
+        ]
+      },
+      "value": null,
+      "output_field": null,
+      "checkpoint": {
+        "type": "url_matches",
+        "pattern": "/member/M-1001/confirmation",
+        "match_type": "contains"
+      },
+      "risk_level": "risky",
+      "timeout_ms": 8000,
+      "pre_conditions": null
+    }
+  ],
+  "business_outcomes": [],
+  "error_handlers": [
+    {
+      "name": "session_expired",
+      "detection": {
+        "type": "url_matches",
+        "pattern": "/login",
+        "match_type": "contains"
+      },
+      "recovery_action": "re_authenticate",
+      "max_retries": 1,
+      "description": "An unexpected redirect back to the login page, indicating the session timed out between discovery and replay."
+    },
+    {
+      "name": "unexpected_dialog",
+      "detection": {
+        "type": "element_visible",
+        "text": null,
+        "role": "dialog"
+      },
+      "recovery_action": "dismiss_dialog",
+      "max_retries": 1,
+      "description": "A native confirm()/alert() dialog appeared that wasn't part of the recorded flow and must be dismissed before continuing."
+    }
+  ],
+  "success_condition": {
+    "type": "text_present",
+    "text": "Sub-account successfully created",
+    "case_sensitive": false
+  }
+}
