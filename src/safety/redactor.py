@@ -33,6 +33,7 @@ _EMAIL_RE = re.compile(r"\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+\b")
 _PASSWORD_KEY_NAMES = {"password", "pwd", "passwd"}
 _LABEL_FIELDS = ("target_description", "target_text", "description", "reasoning", "anchor_text", "label")
 _VALUE_FIELDS = ("value", "expected_value")
+_TEMPLATE_REF_RE = re.compile(r"\{\{\s*input\.")
 
 
 def redact(text: str) -> str:
@@ -71,6 +72,15 @@ def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
     'Password:'"`, `value: "hunter2"`): if any label-like field in a dict
     mentions "password", sibling value fields are redacted outright even
     though the value itself carries no recognizable pattern.
+
+    Exempt from that sibling-context override: a value that is (or embeds) a
+    `{{input.x}}` template reference. Those appear verbatim in saved
+    Artifacts (`src/models/actions.py`'s `TEMPLATE_REF_PATTERN`) and in
+    `ElementHasValueCondition.expected_value`, never as the literal secret,
+    so overwriting one with a placeholder doesn't protect anything - it
+    corrupts the artifact, e.g. turning a password step's
+    `value: "{{input.password}}"` into a literal string that gets typed into
+    the field at replay time instead of the real templated input.
     """
     password_context = any(
         isinstance(data.get(field), str) and "password" in data[field].lower() for field in _LABEL_FIELDS
@@ -78,7 +88,12 @@ def redact_dict(data: dict[str, Any]) -> dict[str, Any]:
 
     result: dict[str, Any] = {}
     for key, value in data.items():
-        if password_context and key in _VALUE_FIELDS and isinstance(value, str):
+        if (
+            password_context
+            and key in _VALUE_FIELDS
+            and isinstance(value, str)
+            and not _TEMPLATE_REF_RE.search(value)
+        ):
             result[key] = "[REDACTED-PWD]"
         else:
             result[key] = _redact_value(value, key)
